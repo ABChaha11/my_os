@@ -13,8 +13,12 @@ CFLAGS = -nostdlib -fno-builtin -mcmodel=medany -Wall -g -Iinclude
 # -T kernel/kernel.ld: 使用我们的链接脚本
 LDFLAGS = -T kernel/kernel.ld
 
+# --- 修改开始 ---
 # 定义所有的源文件
-SRCS = kernel/entry.S kernel/main.c kernel/uart.c
+# 新增了 kernel/console.c 和 kernel/printf.c
+SRCS = kernel/entry.S kernel/main.c kernel/uart.c kernel/console.c kernel/printf.c
+# --- 修改结束 ---
+
 # 根据源文件自动生成目标文件列表 (.o)
 OBJS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRCS)))
 
@@ -46,8 +50,7 @@ clean:
 # -bios none: 不加载默认的 BIOS/Firmware
 # -kernel $(TARGET): 将我们的内核作为可执行文件加载
 qemu: $(TARGET)
-	qemu-system-riscv64 -machine virt -nographic -bios none -kernel $(TARGET)
-
+	qemu-system-riscv64 -machine virt -bios none -kernel $(TARGET) -nographic
 # QEMU 调试命令
 # -S: 启动后冻结 CPU，等待 GDB 连接
 # -s: 在 1234 端口开启 GDB server (这是 -gdb tcp::1234 的简写)
@@ -56,3 +59,4 @@ qemu-gdb: $(TARGET)
 
 # 声明 clean 和 qemu* 不是文件名
 .PHONY: all clean qemu qemu-gdb
+
