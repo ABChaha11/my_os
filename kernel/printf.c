@@ -1,15 +1,9 @@
 #include "console.h" // 我们将依赖控制台层
 #include <stdarg.h>  // 用于处理可变参数
-<<<<<<< HEAD
-
-// 静态辅助函数，不对外暴露
-static void print_number(long long num, int base, int sign);
-=======
 #include <stddef.h>  // for NULL
 
 // 静态辅助函数，不对外暴露
 static void print_number(long long num, int base, int sign, int width, char padc);
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 static void print_string(char *s);
 
 /**
@@ -34,18 +28,6 @@ int sprintf(char *out, const char *format, ...) {
  * @return 写入的字符数
  */
 int printf(const char *format, ...) {
-<<<<<<< HEAD
-    va_list ap; // 定义一个指向可变参数列表的指针
-    int i = 0;
-    char *s;
-
-    // --- 任务4：格式字符串解析 ---
-    va_start(ap, format); // 初始化ap，使其指向format后的第一个参数
-    while (format && format[i]) {
-        char c = format[i];
-        if (c != '%') {
-            // 1. 普通字符直接输出
-=======
     va_list ap;
     int i = 0;
     char *s;
@@ -56,33 +38,11 @@ int printf(const char *format, ...) {
     while (format && format[i]) {
         char c = format[i];
         if (c != '%') {
->>>>>>> b9fe6fb (实验3：页表与内存管理)
             console_putc(c);
             i++;
             continue;
         }
         
-<<<<<<< HEAD
-        // 2. 遇到 %，进入格式处理状态
-        i++; // 跳过 '%'
-        c = format[i];
-
-        switch (c) {
-            case 'd': // 十进制整数
-                // 3. 提取对应的参数
-                print_number(va_arg(ap, int), 10, 1);
-                break;
-            case 'x': // 十六进制整数
-                print_number(va_arg(ap, int), 16, 0);
-                break;
-            case 'p': // 指针
-                console_puts("0x");
-                print_number(va_arg(ap, unsigned long), 16, 0);
-                break;
-            case 's': // 字符串
-                s = va_arg(ap, char *);
-                if (s == 0) {
-=======
         i++; // 跳过 '%'
         c = format[i];
 
@@ -109,23 +69,10 @@ int printf(const char *format, ...) {
             case 's':
                 s = va_arg(ap, char *);
                 if (s == NULL) {
->>>>>>> b9fe6fb (实验3：页表与内存管理)
                     s = "(null)";
                 }
                 print_string(s);
                 break;
-<<<<<<< HEAD
-            case 'c': // 字符
-                console_putc(va_arg(ap, int));
-                break;
-            case '%': // 百分号
-                console_putc('%');
-                break;
-            case '\0': // 格式字符串意外结束
-                goto out;
-            default:
-                // 4. 处理未知格式符
-=======
             case 'c':
                 console_putc(va_arg(ap, int));
                 break;
@@ -135,7 +82,6 @@ int printf(const char *format, ...) {
             case '\0':
                 goto out;
             default:
->>>>>>> b9fe6fb (实验3：页表与内存管理)
                 console_putc('%');
                 console_putc(c);
                 break;
@@ -144,13 +90,8 @@ int printf(const char *format, ...) {
     }
 
 out:
-<<<<<<< HEAD
-    va_end(ap); // 清理ap
-    return 0; // 返回值暂不实现
-=======
     va_end(ap);
     return 0;
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 }
 
 /**
@@ -169,30 +110,6 @@ static void print_string(char *s) {
  * @param base 进制 (10 或 16)
  * @param sign 是否为有符号数 (1 是, 0 否)
  */
-<<<<<<< HEAD
-static void print_number(long long num, int base, int sign) {
-    // --- 任务3：数字转换核心算法 ---
-    static char digits[] = "0123456789abcdef";
-    char buf[32];
-    int i = 0;
-    unsigned long long n;
-
-    // 处理符号
-    if (sign && num < 0) {
-        console_putc('-');
-        n = -num; // 使用更大的类型来避免 INT_MIN 溢出
-    } else {
-        n = num;
-    }
-    
-    // 转换数字
-    do {
-        buf[i++] = digits[n % base];
-        n /= base;
-    } while (n > 0);
-
-    // 逆序输出
-=======
 static void print_number(long long num, int base, int sign, int width, char padc) {
     static char digits[] = "0123456789abcdef";
     char buf[40];
@@ -219,7 +136,6 @@ static void print_number(long long num, int base, int sign, int width, char padc
         console_putc('-');
     }
 
->>>>>>> b9fe6fb (实验3：页表与内存管理)
     while (--i >= 0) {
         console_putc(buf[i]);
     }

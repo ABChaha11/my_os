@@ -1,8 +1,5 @@
 #include "uart.h"
-<<<<<<< HEAD
-=======
 #include "types.h"
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 
 // 定义 UART 寄存器的宏，方便读写
 // reg 是相对于基地址 UART0 的偏移量

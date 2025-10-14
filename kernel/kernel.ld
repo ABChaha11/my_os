@@ -13,10 +13,7 @@ SECTIONS
     . = ALIGN(16);
     *(.srodata .srodata.*)
     *(.rodata .rodata.*)
-<<<<<<< HEAD
-=======
     PROVIDE(etext = .);
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 }
 
 .data : {

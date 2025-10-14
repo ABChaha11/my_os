@@ -1,24 +1,17 @@
 #include "uart.h"
 #include "console.h"
 #include "printf.h"
-<<<<<<< HEAD
-=======
 #include "pmm.h"
 #include "vm.h"
 #include "riscv.h"
 #include "memlayout.h"
 #include "defs.h"
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 
 // 声明由链接脚本提供的外部符号
 extern void *_bss_start;
 extern void *_bss_end;
 extern void *_end;
 
-<<<<<<< HEAD
-// --- 修改开始: 使用 printf 来增强 panic 函数 ---
-=======
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 /**
  * @brief 内核致命错误处理函数
  * @param s 错误信息字符串
@@ -29,21 +22,12 @@ void panic(char *s){
     // 锁定系统，进入无限循环
     while (1) {}
 }
-<<<<<<< HEAD
-// --- 修改结束 ---
-
-// --- 新增: printf 测试函数 ---
-void test_printf_basic();
-void test_printf_edge_cases();
-// --- 新增结束 ---
-=======
 
 // --- 测试函数声明 ---
 void test_printf_basic();
 void test_printf_edge_cases();
 void test_pmm();
 void test_vm();
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 
 /**
  * @brief 一个简单的忙等待延时函数
@@ -61,19 +45,6 @@ static void delay(volatile unsigned long count) {
  * @brief 内核的C语言入口函数
  */
 void kmain(void) {
-<<<<<<< HEAD
-    // 初始化串口
-    uart_init();
-
-    // 测试清屏功能
-    // 打印初始信息，用于测试
-    printf("--- riscv-os Kernel Booting ---\n");
-    printf("Welcome! The screen is about to be cleared...\n");
-    printf("Line 1: Some initial text.\n");
-    printf("Line 2: More initial text.\n\n");
-
-    // 2. 等待一段时间，让我们能清楚地看到上面的信息
-=======
     // 1. 初始化串口
     uart_init();
     printf("--- riscv-os Kernel Booting ---\n");
@@ -87,7 +58,6 @@ void kmain(void) {
     kvminithart();
 
     // 等待一段时间，让我们能清楚地看到上面的信息
->>>>>>> b9fe6fb (实验3：页表与内存管理)
     delay(3000000000UL);
 
     clear_screen();
@@ -95,27 +65,19 @@ void kmain(void) {
 
     delay(3000000000UL);
 
-<<<<<<< HEAD
-    // 运行printf测试用例
-=======
     // --- 运行测试 ---
     printf("\n--- Running Tests ---\n");
 
->>>>>>> b9fe6fb (实验3：页表与内存管理)
     test_printf_basic();
     printf("\n");
     test_printf_edge_cases();
     printf("\n");
     
-<<<<<<< HEAD
-    printf("All tests finished.\n");
-=======
     test_pmm();
     test_vm();
 
     printf("\n--- All tests passed! ---\n");
 
->>>>>>> b9fe6fb (实验3：页表与内存管理)
     printf("Kernel is now halting.\n");
 
     // 内核不应该返回，进入无限循环
@@ -123,11 +85,7 @@ void kmain(void) {
 }
 
 
-<<<<<<< HEAD
-// --- 新增开始: 完整的测试用例实现 ---
-=======
 // ---完整的测试用例实现 ---
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 /**
  * @brief 基础功能测试
  */
@@ -158,9 +116,6 @@ void test_printf_edge_cases() {
     printf("NULL string: %s\n", (char*)0);
     printf("Empty string: %s\n", "");
 }
-<<<<<<< HEAD
-// --- 新增结束 ---
-=======
 
 /**
  * @brief 测试物理内存管理器 (PMM)
@@ -218,5 +173,4 @@ void test_vm() {
     
     printf("  VM test passed.\n");
 }
->>>>>>> b9fe6fb (实验3：页表与内存管理)
 
