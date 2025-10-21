@@ -11,6 +11,7 @@ pagetable_t kernel_pagetable;
 
 // 由链接器脚本提供
 extern char etext[];  // 内核代码段 (.text) 的结束地址
+extern char erodata[];  // .rodata 段的结束
 
 // 内部辅助函数声明
 static pte_t* walk_create(pagetable_t pt, uint64_t va);
@@ -134,36 +135,26 @@ int map_page(pagetable_t pt, uint64_t va, uint64_t pa, int perm) {
 void kvminit(void) {
     printf("kvminit: creating kernel page table...\n");
 
-    // 1. 分配一个物理页作为根页表 (L2)
     kernel_pagetable = (pagetable_t)alloc_page();
     if (kernel_pagetable == 0) {
         panic("kvminit: out of memory for page table");
     }
 
-    // 2. 映射 UART 设备
-    // 将 UART0 的虚拟地址映射到其物理地址，权限为 R+W
-    if(map_region(kernel_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W) != 0){
-        panic("kvminit: failed to map uart");
-    }
+    // 1. 映射 UART 设备 (R+W)
+    map_region(kernel_pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
     printf("kvminit: mapped uart (0x%lx)\n", (uint64_t)UART0);
 
-    // 3. 映射内核代码段 (.text)
-    // 权限为 R+X (可读可执行)
-    if(map_region(kernel_pagetable, KERNBASE, KERNBASE, (uint64_t)etext - KERNBASE, PTE_R | PTE_X) != 0){
-        panic("kvminit: failed to map kernel text");
-    }
-    printf("kvminit: mapped kernel text [0x%lx, 0x%lx)\n", (uint64_t)KERNBASE, (uint64_t)etext);
+    // 2. 映射内核 .text 段 (R+X)
+    map_region(kernel_pagetable, KERNBASE, KERNBASE, (uint64_t)etext - KERNBASE, PTE_R | PTE_X);
+    printf("kvminit: mapped kernel text [0x%lx, 0x%lx)\n", KERNBASE, (uint64_t)etext);
+
+    // 3. 映射 .rodata, .data, .bss 和剩余的 RAM (R+W)
+    //    为了避免与 .text 段的最后一页重叠，我们从 etext 向上取整的页面开始映射。
+    uint64_t rw_start = PGROUNDUP((uint64_t)etext);
+    map_region(kernel_pagetable, rw_start, rw_start, PHYSTOP - rw_start, PTE_R | PTE_W);
+    printf("kvminit: mapped kernel data and ram [0x%lx, 0x%lx)\n", rw_start, PHYSTOP);
     
-    // 4. 映射内核数据段和剩余的物理内存
-    // 权限为 R+W (可读可写)
-    uint64_t data_start = PGROUNDUP((uint64_t)etext);
-    if(map_region(kernel_pagetable, data_start, data_start, PHYSTOP - data_start, PTE_R | PTE_W) != 0){
-        panic("kvminit: failed to map kernel data and ram");
-    }
-    printf("kvminit: mapped kernel data and ram [0x%lx, 0x%lx)\n", data_start, (uint64_t)PHYSTOP);
-    
-    printf("kvminit: kernel page table created successfully.\n");
-}
+    printf("kvminit: kernel page table created successfully.\n");}
 
 /**
  * @brief 激活内核页表

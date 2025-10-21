@@ -6,11 +6,15 @@
 #include "riscv.h"
 #include "memlayout.h"
 #include "defs.h"
+#include "trap.h"
 
 // 声明由链接脚本提供的外部符号
 extern void *_bss_start;
 extern void *_bss_end;
 extern void *_end;
+
+// 声明全局时钟计数器 (来自 trap.c)
+extern volatile int ticks;
 
 /**
  * @brief 内核致命错误处理函数
@@ -28,6 +32,8 @@ void test_printf_basic();
 void test_printf_edge_cases();
 void test_pmm();
 void test_vm();
+void test_timer_interrupt();
+void test_exception_handling();
 
 /**
  * @brief 一个简单的忙等待延时函数
@@ -43,27 +49,38 @@ static void delay(volatile unsigned long count) {
 
 /**
  * @brief 内核的C语言入口函数
+ * (现在在 S-Mode 下运行)
  */
 void kmain(void) {
     // 1. 初始化串口
     uart_init();
     printf("--- riscv-os Kernel Booting ---\n");
-    // 2. 初始化物理内存管理器
+
+    // 2. 初始化陷阱 (中断) 系统
+    trap_init();      // 初始化 ticks 等
+    trapinithart();   // 设置 stvec (指向 kernelvec)
+
+    // 3. 初始化物理内存管理器
     pmm_init();
     
-    // 3. 创建内核页表并进行映射
+    // 4. 创建内核页表并进行映射
     kvminit();
 
-    // 4. 激活虚拟内存 (启用分页)
+    // 5. 激活虚拟内存 (启用分页)
     kvminithart();
 
+    // 6. 开启 S-Mode 全局中断 (sstatus.SIE = 1)
+    //    现在 stvec 已经设置好，可以安全地开启中断了
+    w_sstatus(r_sstatus() | SSTATUS_SIE);
+    printf("kmain: S-Mode interrupts enabled.\n");
+
     // 等待一段时间，让我们能清楚地看到上面的信息
-    delay(3000000000UL);
+    delay(300000000);
 
     clear_screen();
     printf("Screen cleared.\n\n");
 
-    delay(3000000000UL);
+    delay(300000000);
 
     // --- 运行测试 ---
     printf("\n--- Running Tests ---\n");
@@ -75,6 +92,9 @@ void kmain(void) {
     
     test_pmm();
     test_vm();
+
+    printf("\n");
+    test_timer_interrupt();
 
     printf("\n--- All tests passed! ---\n");
 
@@ -174,3 +194,35 @@ void test_vm() {
     printf("  VM test passed.\n");
 }
 
+/**
+ * @brief 测试时钟中断
+ */
+void test_timer_interrupt() {
+    printf("--- Testing Timer Interrupt ---\n");
+    printf("  (ticks 会在后台由中断自动增加)\n");
+    
+    int start_ticks = ticks;
+    // 等待5个时钟中断发生
+    while (ticks < start_ticks + 5) {
+        // 使用 nop 让 CPU 忙等待
+        __asm__ volatile("nop");
+    }
+    
+    printf("  Timer test passed (ticks = %d).\n", ticks);
+}
+
+/**
+ * @brief 测试异常处理
+ * @note 取消本函数在 kmain 中的注释会导致内核 panic (这是预期行为)。
+ */
+void test_exception_handling() {
+    printf("--- Testing Exception Handling ---\n");
+    printf("  Generating a deliberate Store Page Fault (writing to 0x0)...\n");
+    
+    // 这将导致 Store/AMO page fault (scause = 15)
+    // 我们的 kerneltrap 将捕获它并 panic
+    *((volatile char*)0x0) = 0;
+    
+    // 如果程序能执行到这里，说明陷阱处理失败了
+    panic("Exception test FAILED! System did not trap.");
+}

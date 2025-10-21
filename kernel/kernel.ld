@@ -8,13 +8,14 @@ SECTIONS
 .text : {
     *(.text .text.*)
 }
+PROVIDE(etext = .);
 
 .rodata : {
     . = ALIGN(16);
     *(.srodata .srodata.*)
     *(.rodata .rodata.*)
-    PROVIDE(etext = .);
 }
+PROVIDE(erodata = .);
 
 .data : {
     . = ALIGN(16);

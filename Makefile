@@ -13,11 +13,8 @@ CFLAGS = -nostdlib -fno-builtin -mcmodel=medany -Wall -g -Iinclude
 # -T kernel/kernel.ld: 使用我们的链接脚本
 LDFLAGS = -T kernel/kernel.ld
 
-# --- 修改开始 ---
 # 定义所有的源文件
-# 新增了 kernel/pmm.c 和 kernel/vm.c
-SRCS = kernel/entry.S kernel/main.c kernel/uart.c kernel/console.c kernel/printf.c kernel/pmm.c kernel/vm.c
-# --- 修改结束 ---
+SRCS = kernel/entry.S kernel/main.c kernel/uart.c kernel/console.c kernel/printf.c kernel/pmm.c kernel/vm.c kernel/start.c kernel/trap.c kernel/kernelvec.S
 
 # 根据源文件自动生成目标文件列表 (.o)
 OBJS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRCS)))
