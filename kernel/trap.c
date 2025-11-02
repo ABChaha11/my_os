@@ -102,6 +102,7 @@ void trap_init(void) {
 // (任务3) 在 S-Mode 下设置中断向量表
 void trapinithart(void) {
     // 将 stvec 设置为 S-Mode 陷阱入口 (kernelvec.S)
+    //如果发生任何中断或异常（统称 Trap），立即跳转到 kernelvec 这个地址。
     w_stvec((uint64_t)kernelvec);
     printf("trapinithart: stvec set to 0x%lx\n", (uint64_t)kernelvec);
 }

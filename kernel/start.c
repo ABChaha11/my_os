@@ -34,8 +34,10 @@ void start(void) {
 
     // --- 4. 委托中断和异常 ---
     // 委托所有同步异常 (medeleg)
+    // 将所有类型的同步异常（如缺页、非法指令）都路由给S-Mode处理
     w_medeleg(0xffff);
     // 委托所有中断 (mideleg)
+    //所有类型的异步终端（如始终、外部设备）也都路由给S-Mode处理
     w_mideleg(0xffff);
 
     // --- 5. 配置 S-Mode 中断 ---

@@ -92,13 +92,17 @@ void kmain(void) {
     
     test_pmm();
     test_vm();
-
     printf("\n");
+
     test_timer_interrupt();
 
     printf("\n--- All tests passed! ---\n");
 
     printf("Kernel is now halting.\n");
+
+    //测试异常捕获
+    //为使得其他测试正常运行，通常将该调用注释掉！
+    //test_exception_handling();
 
     // 内核不应该返回，进入无限循环
     while (1) {}
@@ -216,6 +220,7 @@ void test_timer_interrupt() {
  * @note 取消本函数在 kmain 中的注释会导致内核 panic (这是预期行为)。
  */
 void test_exception_handling() {
+    printf("\n");
     printf("--- Testing Exception Handling ---\n");
     printf("  Generating a deliberate Store Page Fault (writing to 0x0)...\n");
     
