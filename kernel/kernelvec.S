@@ -10,15 +10,14 @@
 .align 4
 kernelvec:
     # 任务4：上下文保存
-    # 1. 在内核栈上分配 256 字节空间 (32 * 8)
-    #    (我们实际只保存18个，但256是常见对齐值)
+    # 在内核栈上分配空间
+    # 调整为 32 * 8 = 256
     addi sp, sp, -256
 
-    # 2. 保存调用者保存 (Caller-saved) 寄存器
-    #    (以及 gp 和 tp)
+    # 保存调用者保存 (Caller-saved) 寄存器
     sd ra, 0(sp)
     sd gp, 16(sp)
-    sd tp, 24(sp)
+    sd tp, 24(sp)   # 保存 tp
     sd t0, 32(sp)
     sd t1, 40(sp)
     sd t2, 48(sp)
@@ -41,7 +40,7 @@ kernelvec:
     # 4. 恢复上下文 (顺序相反)
     ld ra, 0(sp)
     ld gp, 16(sp)
-    ld tp, 24(sp)
+    ld tp, 24(sp)   # 恢复 tp
     ld t0, 32(sp)
     ld t1, 40(sp)
     ld t2, 48(sp)

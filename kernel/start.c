@@ -15,6 +15,10 @@ void timerinit();
  * (由 entry.S 调用)
  */
 void start(void) {
+    // --- 0. 设置 tp 寄存器 (Hart ID) ---
+    // S-Mode 将使用 tp 寄存器来识别 CPU 核心
+    w_tp(r_mhartid());
+
     // --- 1. 设置 M-Mode 状态 ---
     // 设置 MSTATUS.MPP 为 S-Mode (MPP=1)
     // 这样 mret 后会进入 S-Mode

@@ -33,6 +33,23 @@ static inline void w_sie(uint64_t x) {
 #define SIE_STIE (1L << 5) // S-Mode 时钟中断使能
 #define SIE_SSIE (1L << 1) // S-Mode 软件中断使能
 
+// --- 中断控制 ---
+// 开启 S-Mode 中断
+static inline void intr_on() {
+    w_sstatus(r_sstatus() | SSTATUS_SIE);
+}
+
+// 关闭 S-Mode 中断
+static inline void intr_off() {
+    w_sstatus(r_sstatus() & ~SSTATUS_SIE);
+}
+
+// 检查中断是否开启
+static inline int intr_get() {
+    uint64_t x = r_sstatus();
+    return (x & SSTATUS_SIE) != 0;
+}
+
 // S-Mode 陷阱向量基地址 (stvec)
 static inline uint64_t r_stvec() {
     uint64_t x;
@@ -144,8 +161,14 @@ static inline uint64_t r_mhartid() {
 }
 
 // S-Mode Thread Pointer (tp)
+// 我们用 tp 寄存器来存储 hartid (cpuid)
+static inline uint64_t r_tp() {
+    uint64_t x;
+    asm volatile("mv %0, tp" : "=r"(x));
+    return x;
+}
 static inline void w_tp(uint64_t x) {
-    asm volatile("csrw tp, %0" : : "r"(x));
+    asm volatile("mv tp, %0" : : "r"(x));
 }
 
 // M-Mode 计数器使能

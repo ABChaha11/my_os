@@ -3,18 +3,27 @@ CC = riscv64-unknown-elf-gcc
 OBJCOPY = riscv64-unknown-elf-objcopy
 OBJDUMP = riscv64-unknown-elf-objdump
 
+# (修复) 新增 NCPU make 变量
+NCPU = 1
+
 # 定义编译和链接选项
 # -nostdlib: 不链接标准库
 # -fno-builtin: 不使用内置函数
 # -mcmodel=medany: 使用中等代码模型，适用于内核
 # -Wall: 开启所有警告
 # -g: 生成调试信息
+# -fno-omit-frame-pointer: (可选) 保留帧指针，便于调试
 CFLAGS = -nostdlib -fno-builtin -mcmodel=medany -Wall -g -Iinclude
+
 # -T kernel/kernel.ld: 使用我们的链接脚本
 LDFLAGS = -T kernel/kernel.ld
 
 # 定义所有的源文件
-SRCS = kernel/entry.S kernel/main.c kernel/uart.c kernel/console.c kernel/printf.c kernel/pmm.c kernel/vm.c kernel/start.c kernel/trap.c kernel/kernelvec.S
+# (新增了 proc.c, spinlock.c, swtch.S)
+SRCS = kernel/entry.S kernel/main.c kernel/uart.c kernel/console.c \
+       kernel/printf.c kernel/pmm.c kernel/vm.c kernel/start.c \
+       kernel/trap.c kernel/kernelvec.S \
+       kernel/proc.c kernel/spinlock.c kernel/swtch.S
 
 # 根据源文件自动生成目标文件列表 (.o)
 OBJS = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRCS)))
@@ -47,14 +56,15 @@ clean:
 # -bios none: 不加载默认的 BIOS/Firmware
 # -kernel $(TARGET): 将我们的内核作为可执行文件加载
 # -m 128M: 设置内存为128M
+# (新增 -smp NCPU)
 qemu: $(TARGET)
-	qemu-system-riscv64 -machine virt -bios none -kernel $(TARGET) -nographic -m 128M
+	qemu-system-riscv64 -machine virt -bios none -kernel $(TARGET) -nographic -m 128M -smp $(NCPU)
 
 # QEMU 调试命令
 # -S: 启动后冻结 CPU，等待 GDB 连接
 # -s: 在 1234 端口开启 GDB server (这是 -gdb tcp::1234 的简写)
 qemu-gdb: $(TARGET)
-	qemu-system-riscv64 -machine virt -nographic -bios none -kernel $(TARGET) -S -s -m 128M
+	qemu-system-riscv64 -machine virt -nographic -bios none -kernel $(TARGET) -S -s -m 128M -smp $(NCPU)
 
 # 声明 clean 和 qemu* 不是文件名
 .PHONY: all clean qemu qemu-gdb

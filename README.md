@@ -1,44 +1,65 @@
+好的，你已经成功地将“进程”这一灵魂注入了`my_os`，`README.md`也必须跟上这个巨大的飞跃。
+
+基于你现有的`README.md`，我已经为你准备好了更新版本。这个版本在原有基础上：
+
+1.  在“功能特性”中添加了**进程管理**和**抢占式调度**。
+2.  更新了“项目结构”，加入了所有新文件（`proc.c`, `spinlock.c`, `swtch.S`等）。
+3.  **完全重写**了“工作原理解析”，将其升级为包含**进程调度**和**生命周期管理**的全新描述。
+4.  更新了“系统流程示意图”，加入了`scheduler`和`kfork`（以`user_init`为例）的流程。
+
+请用下面的完整内容替换你现有的 `README.md`：
+
+-----
+
 # riscv-os: 一个极简的RISC-V操作系统内核
 
-**riscv-os** 是一个为教学目的而创建的、极简的操作系统内核。它基于 **RISC-V 64位架构**，能在 **QEMU virt** 模拟环境中启动。本内核清晰地展示了从硬件引导到C语言环境的完整流程，并实现了一个功能丰富的格式化输出系统。
+**riscv-os** 是一个为教学目的而创建的、极简的操作系统内核。它基于 **RISC-V 64位架构**，能在 **QEMU virt** 模拟环境中启动。本内核清晰地展示了从硬件引导、内存管理、中断处理到**抢占式多任务调度**的完整流程。
 
-这个项目的核心目标是让学习者深入理解操作系统的引导过程、分层设计思想、以及内核与硬件交互的基本原理。
+这个项目的核心目标是让学习者深入理解操作系统的引导过程、分层设计思想、虚拟内存机制以及进程管理的实现原理。
 
----
+-----
 
 ## ✨ 功能特性
-- **平台**: RISC-V (RV64GC)
-- **目标机器**: QEMU virt machine
-- **语言**: C 和 RISC-V 汇编
+
+  - **平台**: RISC-V (RV64GC)
+  - **目标机器**: QEMU virt machine
+  - **语言**: C 和 RISC-V 汇编
 
 ### 核心功能
-- **完整启动链**: 实现了从汇编入口(`entry.S`)到C语言主函数(`kmain`)的完整引导流程。
-- **C语言环境**: 建立了基本的C语言运行时环境，包括设置栈指针和清零BSS段。
-- **分层输出系统**: 构建了 `printf` -> `console` -> `uart` 的三层解耦输出架构。
-- **格式化输出**: 实现了功能丰富的`printf`，支持 `%d`, `%x`, `%p`, `%s`, `%c` 及 `%%` 等常用格式。
-- **虚拟内存**: 实现了基于Sv39规范的三级页表，支持内核空间的虚拟地址映射。
-- **错误处理**: 设计了一个基本的`panic`致命错误处理机制。
 
-### 中断与特权级
-- **M/S特权级分离**: 内核引导程序运行在M-Mode，负责硬件初始化与中断委托；内核主体运行在S-Mode，负责核心逻辑。
-- **陷阱(Trap)处理框架**: 建立了统一的中断/异常处理入口(`kernelvec`)，能够进行上下文的精确保存与恢复。
-- **中断分发**: C语言中断处理函数(`kerneltrap`)能够根据`scause`寄存器分发中断和异常。
-- **时钟中断**: 成功实现了由硬件时钟驱动的周期性中断，证明了事件驱动模型正常工作。
+  - **完整启动链**: 实现了从汇编入口(`entry.S`)到C语言主函数(`kmain`)的完整引导流程。
+  - **C语言环境**: 建立了基本的C语言运行时环境，包括设置栈指针和清零BSS段。
+  - **分层输出系统**: 构建了 `printf` -\> `console` -\> `uart` 的三层解耦输出架构。
+  - **格式化输出**: 实现了功能丰富的`printf`，支持 `%d`, `%x`, `%p`, `%s`, `%c` 及 `%%` 等常用格式。
+  - **虚拟内存**: 实现了基于Sv39规范的三级页表，支持内核空间的恒等映射（Identity Mapping）。
+  - **物理内存管理**: 实现了基于侵入式链表的物理页分配器（PMM）。
+  - **错误处理**: 设计了一个基本的`panic`致命错误处理机制。
 
----
+### 特权级与进程管理
+
+  - **M/S特权级分离**: 内核引导程序运行在M-Mode（`start.c`），负责硬件初始化与中断委托；内核主体运行在S-Mode（`kmain.c`, `proc.c`），负责核心逻辑。
+  - **陷阱(Trap)处理框架**: 建立了统一的中断/异常处理入口(`kernelvec.S`)，能够进行上下文的精确保存与恢复。
+  - **时钟中断**: 成功实现了由硬件时钟驱动的周期性中断。
+  - **抢占式调度**: `scheduler` 实现了一个轮转调度器，并由时钟中断 触发 `yield`，实现了抢占式多任务。
+  - **进程生命周期**: 实现了完整的进程（内核线程）生命周期管理，包括 `kfork`, `kexit`, `kwait`，以及通过 `initproc` 实现的孤儿进程回收。
+  - **同步原语**: 实现了底层的自旋锁（`spinlock.c`） 和高层的 `sleep`/`wakeup` 同步机制。
+
+-----
 
 ## 🛠️ 环境依赖
+
 在开始之前，请确保你已经安装了以下工具：
 
-- **RISC-V 交叉编译工具链**: `riscv64-unknown-elf-gcc`
-- **QEMU 模拟器**: `qemu-system-riscv64`
-- **GNU Make**
+  - **RISC-V 交叉编译工具链**: `riscv64-unknown-elf-gcc`
+  - **QEMU 模拟器**: `qemu-system-riscv64`
+  - **GNU Make**
 
 在 Ubuntu/Debian 系统中，你可以通过以下命令安装：
+
 ```bash
 sudo apt-get update
 sudo apt-get install build-essential git gcc-riscv64-unknown-elf qemu-system-misc
-````
+```
 
 -----
 
@@ -49,8 +70,8 @@ sudo apt-get install build-essential git gcc-riscv64-unknown-elf qemu-system-mis
 <!-- end list -->
 
 ```bash
-git clone [https://github.com/ABChaha11/my_os.git](https://github.com/ABChaha11/my_os.git)
-cd riscv-os
+git clone https://github.com/ABChaha11/my_os.git
+cd my_os
 ```
 
 2.  **编译内核** 在项目根目录下执行 `make` 命令。
@@ -72,72 +93,47 @@ make
 make qemu
 ```
 
-你将会观察到一个动态的输出过程，展示了从M-Mode到S-Mode的切换以及中断的正常工作：
+你将会观察到一个动态的输出过程，展示了从M-Mode到S-Mode的切换、`init`进程的启动，以及所有内核测试的通过：
 
-**预期的最终终端输出**将会是：
+**预期的终端输出**：
 
 ```
 --- riscv-os Kernel Booting ---
-trapinithart: stvec set to 0x80001830
 pmm: initializing...
-pmm: managing memory from 0x80003000 to 0x88000000
+pmm: managing memory from 0x80007000 to 0x88000000
 pmm: initialization complete.
 kvminit: creating kernel page table...
 kvminit: mapped uart (0x10000000)
-kvminit: mapped kernel text [0x80000000, 0x8000188e)
-kvminit: mapped kernel data and ram [0x80002000, 0x88000000)
+kvminit: mapped kernel text [0x80000000, 0x800026d2)
+kvminit: mapped kernel data and ram [0x80003000, 0x88000000)
 kvminit: kernel page table created successfully.
+proc_init: process table initialized.
+proc_init: kernel stacks mapped.
 kvminithart: virtual memory enabled.
+trapinithart: stvec set to 0x800018b0
+user_init: init process created.
 kmain: S-Mode interrupts enabled.
-
-
-Screen cleared.
-
-
---- Running Tests ---
+kmain: starting scheduler...
+init_main: starting... (ticks = 0)
 --- Testing Basic Cases ---
 Testing integer: 42
-Testing negative: -123
-Testing zero: 0
-Testing hex: 0xabc
-Testing pointer: 0x80000000
-Testing string: Hello World!
-Testing char: X
-Testing percent: %
-Multiple args: Number 123, 0x7b
-
---- Testing Edge Cases ---
-INT_MAX: 2147483647
-INT_MIN: -2147483648
-UINT_MAX (hex): 0xffffffff
-NULL string: (null)
-Empty string: 
-
-
+...
 --- Testing PMM ---
-  alloc_page() -> 0x87fbb000
-  alloc_page() -> 0x87fba000
-  free_page(0x87fbb000)
-  alloc_page() -> 0x87fbb000
-  PMM test passed.
+...
+  PMM test passed.
 --- Testing VM ---
-  Kernel text mapping OK.
-  Kernel data mapping OK.
-  UART mapping OK.
-  VM test passed.
+  Kernel text mapping OK.
+  Kernel data mapping OK.
+  UART mapping OK.
+  VM test passed.
 
 --- Testing Timer Interrupt ---
   (ticks 会在后台由中断自动增加)
-  Timer test passed (ticks = 8).
+  Timer test passed (ticks = 6).
 
 --- All tests passed! ---
-Kernel is now halting.
-tick 100
-tick 200
-tick 300
-...
+Kernel is now multitasking.
 ```
-注意: 最后持续打印的 tick ... 信息是在内核主程序停机后，由时钟中断在后台独立驱动的，这证明了中断系统已成功运行。
 
 4.  **清理生成文件**
 
@@ -159,24 +155,30 @@ riscv-os/
 │   ├── kernelvec.S    # S-Mode汇编入口：中断/异常的统一入口，负责上下文保存与恢复
 │   ├── trap.c         # S-Mode C代码：中断/异常的总分发与处理逻辑
 │   ├── kernel.ld      # 链接器脚本：定义内核内存布局
-│   ├── main.c         # S-Mode C主函数(kmain)：内核逻辑与测试
+│   ├── main.c         # S-Mode C主函数(kmain)：内核初始化引导
 │   ├── uart.c         # 硬件抽象层：串口驱动
 │   ├── console.c      # 控制台层：封装串口，处理特殊序列
 │   ├── printf.c       # 格式化层：实现printf
 │   ├── pmm.c          # 物理内存管理器
-│   └── vm.c           # 虚拟内存(页表)管理器
+│   ├── vm.c           # 虚拟内存(页表)管理器
+│   ├── proc.c         # (新增) 进程管理、调度器、生命周期、sleep/wakeup
+│   ├── spinlock.c     # (新增) 自旋锁实现
+│   └── swtch.S        # (新增) 上下文切换汇编代码
 ├── include/
 │   ├── uart.h
 │   ├── console.h
 │   ├── printf.h
 │   ├── pmm.h
 │   ├── vm.h
+|   ├── tests.h        # 包含测试函数的头文件
 │   ├── trap.h         # 中断陷阱相关声明
 │   ├── riscv.h        # RISC-V CSR/分页宏定义
 │   ├── memlayout.h    # 内存布局常量
 │   ├── types.h        # 基本类型定义
-│   ├── param.h        # 内核参数定义
-│   └── defs.h         # 内核函数声明
+│   ├── param.h        # 内核参数定义 (NCPU, NPROC)
+│   ├── defs.h         # 内核函数声明
+│   ├── spinlock.h     # (新增) 自旋锁声明
+│   └── proc.h         # (新增) 进程/CPU/上下文结构体声明
 ├── Makefile           # 自动化构建脚本
 └── README.md          # 本文档
 ```
@@ -185,46 +187,47 @@ riscv-os/
 
 ## 🔬 工作原理解析
 
-本内核的启动与运行是一条精心设计的、跨越M/S特权级的事件驱动执行链，展示了软件如何逐步掌控硬件：
+本内核的启动与运行是一条精心设计的、跨越M/S特权级的多任务执行链：
 
 1.  **链接 (kernel.ld)**
-    `Makefile` 调用链接器 `ld`，并根据 `kernel.ld` 的指示，将所有编译好的代码和数据打包成 `kernel.elf`。`kernel.ld` 定义了内核的基地址（`0x80000000`）、段的内存布局（如 `.text`, `.rodata`, `.data`），并提供了诸如 `etext`（代码段结束）、`erodata`（只读数据段结束）等关键地址符号，供内核在运行时进行精确的内存映射。
+    `Makefile` 调用链接器 `ld`，根据 `kernel.ld` 的指示，将所有编译好的代码和数据（`.o`, `.S`）打包成 `kernel.elf`。`kernel.ld` 定义了内核的基地址（`0x80000000`）和段的内存布局（如 `.text`, `.rodata`, `.data`）。
 
-2.  **M-Mode引导 (entry.S -> start.c)**
-    QEMU 将内核加载到 `0x80000000` 并开始执行。此阶段完全运行在最高特权级——**机器模式（M-Mode）**下，其唯一目标是为S-Mode内核准备一个安全且配置正确的环境。
-    - **`entry.S`**: 作为硬件启动后的第一个入口点，它只负责两件最基础的工作：设置一个临时的M-Mode栈指针（`sp`），以及清零BSS段。随后，它将控制权移交给M-Mode的C函数 `start()`。
-    - **`start.c`**: 这是**M-Mode的配置中心**。它负责执行一系列特权操作，为S-Mode铺平道路：
-        - **委托(Delegate)**: 通过设置`medeleg`和`mideleg`寄存器，将所有S-Mode和U-Mode需要处理的中断和异常都委托给S-Mode。这是实现高性能中断处理的关键。
-        - **配置(Configure)**: 设置PMP（物理内存保护）以允许S-Mode访问全部内存；通过`menvcfg`授权S-Mode访问时钟寄存器，解决了我们在调试中遇到的非法指令问题。
-        - **预约(Arm)**: 调用`timerinit`，通过写`stimecmp`寄存器，预约了第一次S-Mode时钟中断。
-        - **切换(Switch)**: 设置`mepc`指向S-Mode的入口函数`kmain`，并将`mstatus.MPP`位设为S-Mode，最后执行`mret`指令。CPU通过这一指令，原子地将控制权和特权级移交给S-Mode。
+2.  **M-Mode引导 (entry.S -\> start.c)**
+    QEMU 将内核加载到 `0x80000000` 并开始执行。此阶段完全运行在\*\*机器模式（M-Mode）\*\*下，其唯一目标是为S-Mode内核准备环境。
 
-3.  **S-Mode执行与初始化 (main.c)**
-    `kmain()` 函数是**监管者模式（S-Mode）**的C语言入口，也是内核高级逻辑的起点。它的初始化顺序经过精心设计，以规避我们在调试中遇到的各种时序竞争和页表映射陷阱：
-    - **中断准备**: `kmain`做的第一件事就是调用`trapinithart()`，将`stvec`寄存器指向S-Mode的汇编入口`kernelvec`。这确保了在任何中断（尤其是M-Mode预约的那个时钟中断）到来之前，我们都有一个合法的处理程序入口。
-    - **硬件与内存初始化**: 依次调用 `uart_init()`, `pmm_init()`, `kvminit()`，完成串口、物理内存和虚拟内存页表的初始化。
-    - **虚拟内存激活**: 调用`kvminithart()`，将页表地址写入`satp`寄存器并刷新TLB。从此刻起，CPU正式在分页模式下运行，所有地址都成为虚拟地址。
-    - **中断使能**: 在所有准备工作万无一失后，通过设置`sstatus.SIE`位，开启S-Mode的全局中断。至此，内核已准备好响应来自硬件的异步事件。
+      - **`entry.S`**: 硬件启动的第一个入口点，负责设置M-Mode栈指针（`sp`）和清零BSS段。
+      - **`start.c`**: M-Mode的配置中心。它负责将所有中断和异常**委托**给S-Mode（`medeleg`, `mideleg`），配置PMP，预约第一次时钟中断，并将`tp`寄存器设为hartid（CPU ID）。最后，它设置`mepc`指向`kmain`，执行`mret`指令，原子地将控制权和特权级移交给S-Mode。
 
-4.  **陷阱(Trap)处理系统 (trap.c -> kernelvec.S)**
-    这是内核从被动执行转为事件驱动的核心，是一个由硬件和软件协同工作的流程：
-      - **硬件陷阱**: 当时钟中断或异常（如缺页）发生时，CPU硬件会自动保存当前PC到`sepc`，记录原因到`scause`，然后强制跳转到`stvec`指向的地址——`kernelvec.S`。
-      - **`kernelvec.S` (上下文守护者)**: 作为S-Mode所有陷阱的唯一汇编入口，它不关心陷阱的原因，只负责一件核心任务：**保存上下文**。它将所有调用者保存的通用寄存器（`ra`, `t0-t6`, `a0-a7`等）压入当前内核栈，然后调用C语言的总处理函数`kerneltrap`。
-      - **`trap.c` (C语言分发器)**: `kerneltrap`函数通过读取`scause`寄存器来判断事件类型（中断还是异常），然后调用具体的处理函数，例如`clock_handler`或`exception_handler`。
-      - **返回流程**: C函数处理完毕后返回`kernelvec.S`，后者再从栈中按相反顺序**恢复上下文**，最后执行`sret`指令。`sret`会原子地恢复PC和`sstatus`，使程序从被中断的地方无缝地继续执行。
+3.  **S-Mode初始化 (kmain in main.c)**
+    `kmain()` 函数是**监管者模式（S-Mode）的入口。它的角色不再是内核主循环，而是内核初始化器**：
 
-5.  **核心功能模块**
-    - **内存管理系统 (pmm.c -> vm.c)**: 这是一个经典的两层架构。
-        - **物理内存管理器 (pmm.c)**: 作为最底层，它通过一个高效的侵入式链表来管理所有空闲的4KB物理页面，提供 `alloc_page()` 和 `free_page()` 接口。
-        - **虚拟内存管理器 (vm.c)**: 它构建在PMM之上，负责创建和管理符合Sv39规范的页表。`kvminit`函数为内核的`.text`(R-X)、`.rodata`(R--)和`.data`/RAM(RW-)等区域建立了精确的、无重叠的内存映射。
-    - **输出系统 (printf.c -> console.c -> uart.c)**: 这是一个三层解耦架构。
-        - **格式化层 (printf.c)**：负责解析格式字符串并将各种数据类型转换为字符流。
-        - **控制台层 (console.c)**：提供了一个抽象的“控制台”概念，未来可以方便地扩展到支持其他输出设备。
-        - **硬件抽象层 (uart.c)**：通过内存映射I/O（MMIO）直接与串口硬件交互，发送单个字符。
+      - 它按照严格的顺序调用 `pmm_init()`, `kvminit()`, `proc_init()`（负责映射内核栈）, `kvminithart()`（开启分页）, `trapinithart()`（设置陷阱入口）。
+      - 初始化完成后，它调用 `user_init()` 创建第一个进程 `initproc`。
+      - 最后，`kmain` 调用 `scheduler()`，将控制权永久交给调度器。
+
+4.  **陷阱(Trap)与抢占 (trap.c -\> kernelvec.S)**
+
+      - 当时钟中断发生时，CPU硬件强制跳转到 `stvec` 指向的 `kernelvec.S`。
+      - `kernelvec.S` 负责保存所有调用者寄存器（`ra`, `t0-t6`, `a0-a7`等），然后调用C函数 `kerneltrap`。
+      - `kerneltrap` 识别出时钟中断（`scause 0x8...05`），并调用 `clock_handler`。
+      - **抢占点**: `clock_handler` 调用 `yield()`。`yield` 将当前进程状态设为 `RUNNABLE` 并调用 `sched()`。
+
+5.  **调度与上下文切换 (proc.c -\> swtch.S)**
+
+      - **`sched()`**：负责切换的“准备”工作。它在持有进程锁且中断关闭的安全状态下，调用 `swtch(&p->context, &mycpu()->context)`，将当前进程的内核上下文保存到 `p->context`，并从 `mycpu()->context` 中恢复调度器的上下文。
+      - **`scheduler()`**：这是调度器的主循环。它循环遍历 `proc` 数组，当找到一个 `RUNNABLE` 进程 `p` 时，它设置 `p->state = RUNNING`，然后调用 `swtch(&mycpu()->context, &p->context)`。
+      - **`swtch.S`**：执行实际的寄存器切换。它将调度器的上下文保存到 `mycpu()->context`，并从 `p->context` 中加载新进程的上下文。最后，`ret` 指令会跳转到 `p->context.ra`（即新进程上次被切出时保存的返回地址，对于新进程则是 `kthread_wrapper`）。
+
+6.  **进程生命周期 (proc.c)**
+
+      - `initproc` 作为PID 1启动，它运行所有内核测试，然后进入一个 `kwait()` / `yield()` 循环。
+      - 当一个进程调用 `kexit()` 时，它会释放资源，将自己设为 `ZOMBIE`，并 `wakeup(p->parent)`。
+      - `kexit` 还会调用 `reparent()`，将所有子进程过继给 `initproc`。
+      - 最终，`initproc` 的 `kwait()` 循环会捕获到这个 `ZOMBIE` 进程，安全地回收其最后的资源（内核栈和 `proc` 结构），从而防止了资源泄漏。
 
 -----
 
-## 🔗 系统流程示意图
+## 🔗 系统流程示意图 (含进程调度)
 
 ```mermaid
 graph TD;
@@ -233,27 +236,44 @@ graph TD;
         B --> C["kernel.elf"];
     end
 
-    subgraph "运行阶段"
+    subgraph "M-Mode 引导"
         D["make qemu"] --> E{"QEMU 启动"};
         E -- "加载内核到 0x80000000" --> F["执行 entry.S (M-Mode)"];
         F -- "设置栈/BSS" --> G["call start (M-Mode C)"];
-        G -- "委托中断/异常, 预约时钟" --> H["执行 mret"];
-        H -- "CPU切换到S-Mode" --> I["跳转到 kmain (S-Mode C)"];
-        I -- "1. 设置stvec" --> J["trapinithart()"];
-        J -- "2. 初始化内存" --> K["pmm_init() & kvminit()"];
-        K -- "3. 开启分页" --> L["kvminithart()"];
-        L -- "4. 开启全局中断" --> M["w_sstatus(SIE)"];
-        M --> N["执行测试和主循环"];
+        G -- "委托中断, 预约时钟" --> H["执行 mret"];
     end
 
-    subgraph "中断处理流程 (异步)"
-        O["时钟中断发生"] --> P{"硬件陷阱"};
-        P -- "跳转到 stvec" --> Q["kernelvec.S"];
-        Q -- "保存上下文" --> R["call kerneltrap"];
-        R -- "分发 scause" --> S["clock_handler()"];
-        S -- "返回" --> R;
-        R -- "返回" --> Q;
-        Q -- "恢复上下文 & sret" --> N;
+    subgraph "S-Mode 初始化"
+         H -- "CPU切换到S-Mode" --> I["跳转到 kmain (S-Mode C)"];
+         I -- "1. pmm_init()" --> J;
+         J -- "2. kvminit()" --> K;
+         K -- "3. proc_init()" --> L;
+         L -- "4. kvminithart() (分页开启)" --> M;
+         M -- "5. trapinithart()" --> N;
+         N -- "6. user_init() (创建PID 1)" --> O["kfork(init_main)"];
+         O --> P["initproc (PID 1) 设为 RUNNABLE"];
+         P -- "7. 开启中断" --> Q;
+         Q -- "8. call scheduler()" --> R["进入调度器循环"];
+    end
+    
+    subgraph "调度器循环 (proc.c)"
+        R -- "找到 initproc (RUNNABLE)" --> S["swtch(&cpu->ctx, &init->ctx)"];
     end
 
+    subgraph "PID 1 (initproc) 执行 (proc.c)"
+        S --> T["kthread_wrapper()"];
+        T -- "释放锁, 跳转" --> U["init_main()"];
+        U -- "运行所有测试..." --> V;
+        V -- "测试通过, 进入 kwait()/yield() 循环" --> W["kwait()"];
+    end
+
+    subgraph "中断抢占 (trap.c)"
+        U --> X{"时钟中断发生"};
+        X -- "硬件陷阱" --> Y["kernelvec.S (保存寄存器)"];
+        Y -- "call" --> Z["kerneltrap()"];
+        Z -- "分发" --> AA["clock_handler()"];
+        AA -- "调用" --> BB["yield()"];
+        BB -- "p->state = RUNNABLE" --> CC["sched()"];
+        CC -- "swtch(&init->ctx, &cpu->ctx)" --> R;
+    end
 ```

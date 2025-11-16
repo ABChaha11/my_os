@@ -21,13 +21,15 @@ extern volatile int ticks;
  * @param s 错误信息字符串
  */
 void panic(char *s){
-    // 使用我们强大的新printf函数
+    // 关闭中断
+    intr_off();
     printf("PANIC: %s\n", s);
     // 锁定系统，进入无限循环
     while (1) {}
 }
 
 // --- 测试函数声明 ---
+// (这些现在在 proc.c 的 init_main 中)
 void test_printf_basic();
 void test_printf_edge_cases();
 void test_pmm();
@@ -35,17 +37,6 @@ void test_vm();
 void test_timer_interrupt();
 void test_exception_handling();
 
-/**
- * @brief 一个简单的忙等待延时函数
- * @param count 延时计数值。这是一个大约值，需要足够大才能看到明显效果。
- * @note 'volatile' 关键字是必须的，它会告诉编译器不要“优化掉”这个看起来没用的循环。
- */
-static void delay(volatile unsigned long count) {
-    // 这个循环会一直执行，直到count减到0为止，从而达到延时的效果。
-    while (count--){
-        __asm__ volatile("nop");
-    }
-}
 
 /**
  * @brief 内核的C语言入口函数
@@ -56,60 +47,46 @@ void kmain(void) {
     uart_init();
     printf("--- riscv-os Kernel Booting ---\n");
 
-    // 2. 初始化陷阱 (中断) 系统
-    trap_init();      // 初始化 ticks 等
-    trapinithart();   // 设置 stvec (指向 kernelvec)
-
-    // 3. 初始化物理内存管理器
+    // 2. 初始化物理内存管理器
     pmm_init();
     
-    // 4. 创建内核页表并进行映射
+    // 3. 初始化陷阱 (中断) 系统
+    trap_init();      // 初始化 ticks 等
+    
+    // 4. 创建内核页表
     kvminit();
+    
+    // 5. 初始化进程系统 (会映射内核栈)
+    proc_init();
 
-    // 5. 激活虚拟内存 (启用分页)
+    // 6. 激活虚拟内存 (启用分页)
     kvminithart();
 
-    // 6. 开启 S-Mode 全局中断 (sstatus.SIE = 1)
+    // 7. 设置 S-Mode 陷阱向量
+    trapinithart();   // 设置 stvec (指向 kernelvec)
+
+    // 8. 创建第一个进程 (init)
+    user_init();
+
+    // 9. 开启 S-Mode 全局中断 (sstatus.SIE = 1)
     //    现在 stvec 已经设置好，可以安全地开启中断了
-    w_sstatus(r_sstatus() | SSTATUS_SIE);
+    intr_on();
     printf("kmain: S-Mode interrupts enabled.\n");
 
-    // 等待一段时间，让我们能清楚地看到上面的信息
-    delay(300000000);
-
-    clear_screen();
-    printf("Screen cleared.\n\n");
-
-    delay(300000000);
-
-    // --- 运行测试 ---
-    printf("\n--- Running Tests ---\n");
-
-    test_printf_basic();
-    printf("\n");
-    test_printf_edge_cases();
-    printf("\n");
+    printf("kmain: starting scheduler...\n");
     
-    test_pmm();
-    test_vm();
-    printf("\n");
+    // 10. 启动调度器
+    //     scheduler() 将永不返回
+    scheduler();
 
-    test_timer_interrupt();
-
-    printf("\n--- All tests passed! ---\n");
-
-    printf("Kernel is now halting.\n");
-
-    //测试异常捕获
-    //为使得其他测试正常运行，通常将该调用注释掉！
-    //test_exception_handling();
-
-    // 内核不应该返回，进入无限循环
+    // 内核不应该执行到这里
+    panic("kmain: scheduler returned");
     while (1) {}
 }
 
 
-// ---完整的测试用例实现 ---
+// --- 完整的测试用例实现 ---
+// (这些函数现在由 init_main 在第一个进程中调用)
 /**
  * @brief 基础功能测试
  */
@@ -179,18 +156,18 @@ void test_vm() {
 
     printf("--- Testing VM ---\n");
 
-    pte_t *text_pte = walk_lookup(kernel_pagetable, KERNBASE);
+    pte_t *text_pte = walk(kernel_pagetable, KERNBASE, 0);
     if(text_pte == 0 || (*text_pte & PTE_V) == 0) panic("kernel text not mapped");
     if((*text_pte & (PTE_R | PTE_X)) != (PTE_R | PTE_X)) panic("kernel text permissions wrong");
     printf("  Kernel text mapping OK.\n");
 
     uint64_t data_start_addr = PGROUNDUP((uint64_t)etext);
-    pte_t *data_pte = walk_lookup(kernel_pagetable, data_start_addr);
+    pte_t *data_pte = walk(kernel_pagetable, data_start_addr, 0);
     if(data_pte == 0 || (*data_pte & PTE_V) == 0) panic("kernel data not mapped");
     if((*data_pte & (PTE_R | PTE_W)) != (PTE_R | PTE_W)) panic("kernel data permissions wrong");
     printf("  Kernel data mapping OK.\n");
 
-    pte_t *uart_pte = walk_lookup(kernel_pagetable, UART0);
+    pte_t *uart_pte = walk(kernel_pagetable, UART0, 0);
     if(uart_pte == 0 || (*uart_pte & PTE_V) == 0) panic("uart not mapped");
     if((*uart_pte & (PTE_R | PTE_W)) != (PTE_R | PTE_W)) panic("uart permissions wrong");
     printf("  UART mapping OK.\n");
@@ -209,6 +186,7 @@ void test_timer_interrupt() {
     // 等待5个时钟中断发生
     while (ticks < start_ticks + 5) {
         // 使用 nop 让 CPU 忙等待
+        // (现在这会在进程中运行, 不会阻塞其他进程)
         __asm__ volatile("nop");
     }
     
@@ -230,4 +208,25 @@ void test_exception_handling() {
     
     // 如果程序能执行到这里，说明陷阱处理失败了
     panic("Exception test FAILED! System did not trap.");
+}
+
+// (新增) C语言的 "memset"
+void* memset(void *dst, int c, uint64_t n) {
+  char *cdst = (char *) dst;
+  int i;
+  for(i = 0; i < n; i++){
+    cdst[i] = c;
+  }
+  return dst;
+}
+
+// (新增) C语言的 "safestrcpy"
+int safestrcpy(char *s, const char *t, int n) {
+  //char *os;
+  //os = s;
+  if (n <= 0)
+    return -1;
+  while (--n > 0 && (*s++ = *t++) != 0);
+  *s = 0;
+  return 0;
 }

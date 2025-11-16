@@ -3,6 +3,7 @@
 #include "defs.h"
 #include "param.h"
 #include "printf.h"
+#include "proc.h" // 引入进程
 
 // 在 kernelvec.S 中定义的汇编入口点
 extern void kernelvec();
@@ -15,8 +16,14 @@ void clock_handler() {
     ticks++;
 
     // 每 100 个 tick 打印一次 (避免刷屏)
-    if (ticks % 100 == 0) {
-        printf("tick %d\n", ticks);
+    // if (ticks % 100 == 0) {
+    //     printf("tick %d\n", ticks);
+    // }
+    
+    // 抢占式调度:
+    // 如果当前有进程在运行, 强制它 yield
+    if(myproc() != 0 && myproc()->state == RUNNING) {
+        yield();
     }
 
     // 设置下一次时钟中断
@@ -60,9 +67,10 @@ void kerneltrap(void) {
     }
 
     // 检查中断是否关闭
-    if (r_sstatus() & SSTATUS_SIE) {
-        panic("kerneltrap: interrupts enabled");
-    }
+    // (注意: 硬件在进入陷阱时会自动关闭 SIE)
+    // if (r_sstatus() & SSTATUS_SIE) {
+    //    panic("kerneltrap: interrupts enabled");
+    // }
 
     // 判断是中断还是异常
     // scause 最高位为1: 中断
