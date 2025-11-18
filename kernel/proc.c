@@ -411,10 +411,10 @@ void user_init(void) {
   initproc = p;
   
   // 设置包装器和栈
-  p->context.sp = p->kstack;
-  p->context.sp -= 8;
-  *(uint64_t*)(p->context.sp) = (uint64_t)init_main;
-  p->context.ra = (uint64_t)kthread_wrapper;
+  p->context.sp = p->kstack;//设置initproc的栈顶指针sp
+  p->context.sp -= 8;//在栈顶“空出”8个字节
+  *(uint64_t*)(p->context.sp) = (uint64_t)init_main;//将init_main函数地址写入这8个字节空间中
+  p->context.ra = (uint64_t)kthread_wrapper;//设置initproc的context返回地址（ra）为kthread_warpper函数
   
   safestrcpy(p->name, "init", sizeof(p->name));
   p->state = RUNNABLE;
